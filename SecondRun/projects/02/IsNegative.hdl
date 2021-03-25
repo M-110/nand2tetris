@@ -1,0 +1,24 @@
+// Custom Component to check if a 16-bit input is negative
+
+CHIP IsNegative {
+    IN in[16];
+    OUT out;
+
+    PARTS:
+    Not(in=in[0], out=discard);
+    Not(in=in[1], out=discard1);
+    Not(in=in[2], out=discard2);
+    Not(in=in[3], out=discard3);
+    Not(in=in[4], out=discard4);
+    Not(in=in[5], out=discard5);
+    Not(in=in[6], out=discard6);
+    Not(in=in[7], out=discard7);
+    Not(in=in[8], out=discard8);
+    Not(in=in[9], out=discard9);
+    Not(in=in[10], out=discard10);
+    Not(in=in[11], out=discard11);
+    Not(in=in[12], out=discard12);
+    Not(in=in[13], out=discard13);
+    Not(in=in[14], out=discard14);
+    Or(a=in[15], b=in[15], out=out);
+}

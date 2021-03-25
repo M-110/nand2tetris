@@ -1,0 +1,17 @@
+
+/// Custom component to simplify ALU
+
+CHIP UnaryALU {
+    IN  
+        x[16], // 16-bit input
+        z, // Zero output?
+        n; // Negate output?
+
+    OUT 
+        out[16];
+
+    PARTS:
+    Mux16(a=x, b=false, sel=z, out=mux1);
+    Not16(in=mux1, out=notMux1);
+    Mux16(a=mux1, b=notMux1, sel=n, out=out);
+}

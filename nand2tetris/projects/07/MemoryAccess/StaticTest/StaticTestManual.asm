@@ -75,9 +75,70 @@
 
     // push static 3
 
+    @static.3
+    D=M
+
+    @SP
+    A=M
+    M=D
+    
+    @SP
+    M=M+1
 
     // push static 1
 
+    @static.1
+    D=M
 
+    @SP
+    A=M
+    M=D
     
+    @SP
+    M=M+1
 
+    // sub
+    @SP
+    M=M-1
+
+    @SP
+    A=M
+    D=M
+
+    @SP
+    M=M-1
+
+    @SP
+    A=M
+    M=M-D
+
+    @SP
+    M=M+1
+
+    // push static 8
+    
+    @static.8
+    D=M
+
+    @SP
+    A=M
+    M=D
+    
+    @SP
+    M=M+1
+
+
+    // add
+    @SP
+    M=M-1
+    
+    @SP
+    A=M
+    D=M
+
+    @SP
+    M=M-1
+
+    @SP
+    A=M
+    M=M+D

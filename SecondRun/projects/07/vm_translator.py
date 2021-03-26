@@ -97,15 +97,28 @@ class Writer:
             return self.call_parser(command)
         else:
             raise ValueError(f'{command.command_type!r} is an invalid command')
-
+    
+    ### COMMAND PARSERS
     def arithmetic_parser(self, command: Command) -> str:
         pass
 
     def push_parser(self, command: Command) -> str:
-        pass
+        output = []
+        output.append(f'// push {command.arg1} {command.arg2}')
+        output.append(self.set_d_to_value_at_address(command.arg1, command.arg2))
+        output.append('')
+        output.append(self.push_d_to_stack())
+        output.append('')
+        return '\n'.join(output)
 
     def pop_parser(self, command: Command) -> str:
-        pass
+        output = []
+        output.append(f'// push {command.arg1} {command.arg2}')
+        output.append(self.pop_d_from_stack(command.arg1, command.arg2))
+        output.append('')
+        output.append(self.set_address_to_d())
+        output.append('')
+        return '\n'.join(output)
 
     def label_parser(self, command: Command) -> str:
         pass
@@ -122,6 +135,48 @@ class Writer:
     def call_parser(self, command: Command) -> str:
         pass
 
+    ### ACCESS
+    def set_d_to_value_at_address(self, segment: str, index: int) -> str:
+        """Get the value at the address and store it as D."""
+        if segment == 'static':
+            return self.set_d_to_value_at_static(index)
+        elif segment == 'constant':
+            return self.set_d_to_constant(index)
+
+        # For all other segments do this:
+        target = segment_dict[segment]
+        output = [f'@{target}']
+        if index == 0:
+            output.append('A=M')
+        else:
+            output.append('A=M+1')
+            for _ in range(index-1):
+                output.append('A=A+1')
+        output.append('D=M')
+        return '\n'.join(output)
+
+    def set_d_to_value_at_static(self, index: int) -> str:
+        """Set D to the value at the specified static index."""
+        # TODO: Replace static with module name
+        return '\n'.join([f'@static.{index}', 'D=M'])
+
+    def set_d_to_constant(self, index: int) -> str:
+        """Set D to a given constant."""
+        return '\n'.join([f'@{index}', 'D=M'])
+
+    def set_address_to_d(self, segment: str, index: int) -> str:
+        """Set value at the address to D."""
+
+    ## STACK
+    def push_d_to_stack(self) -> str:
+        """Push the current value in the D slot to the top of the stack."""
+        return '\n'.join(['@SP','M=M+1', 'A=M-1', 'M=D'])
+
+
+    def pop_d_from_stack(self) -> str: 
+        """Pop the stack to D."""
+        return '\n'.join(['@SP', 'M=M-1', 'A=M', 'D=M'])
+
 
 class CommandType(Enum):
     ARITHMETIC = 1
@@ -134,10 +189,21 @@ class CommandType(Enum):
     RETURN = 8
     CALL = 9
 
+segment_dict = dict(SP = 'SP',
+                    local = 'LCL',
+                    argument = 'ARG',
+                    this = 'THIS',
+                    that = 'THAT',
+                    pointer = 'POINTER',
+                    temp = 'TEMP')
+
 def main():
     file='BasicTest.vm'
     parser = Parser(file)
 
 if __name__ == '__main__':
-    main()
+    writer = Writer(None, None)
+    cmd = Command(CommandType.PUSH, 'argument', 4)
+    out = writer.parse_command(cmd)
+    print(out)
         

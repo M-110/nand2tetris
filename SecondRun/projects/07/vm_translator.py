@@ -125,7 +125,7 @@ class Writer:
     def __init__(self, commands: List[Command], output_file: str):
         self.commands = commands
         self.output_file = output_file
-        self.asm_commands: List[str] = ['// Compiled using vm_translator.py\n',]
+        self.asm_commands: List[str] = ['// Compiled using vm_translator.py\n', ]
 
     def write_and_save(self):
         self.parse_commands()
@@ -171,7 +171,12 @@ class Writer:
     def push_parser(self, command: Command) -> str:
         output = []
         output.append(f'// push {command.arg1} {command.arg2}')
-        output.append(self.set_d_to_value_at_address(command.arg1, command.arg2))
+        # output.append(self.set_d_to_value_at_address(command.arg1, command.arg2))
+        output.append(self.access_address(command.arg1, command.arg2))
+        if command.arg1 == "constant":
+            output.append('D=A')
+        else:
+            output.append('D=M')
         output.append('')
         output.append(self.push_d_to_stack())
         output.append('')
@@ -182,7 +187,8 @@ class Writer:
         output.append(f'// pop {command.arg1} {command.arg2}')
         output.append(self.pop_d_from_stack())
         output.append('')
-        output.append(self.set_address_to_d(command.arg1, command.arg2))
+        output.append(self.access_address(command.arg1, command.arg2))
+        output.append('M=D')
         output.append('')
         return '\n'.join(output)
 
@@ -201,34 +207,19 @@ class Writer:
     def call_parser(self, command: Command) -> str:
         pass
 
-    # ACCESS
-    def set_d_to_value_at_address(self, segment: str, index: int) -> str:
-        """Get the value at the address and store it as D."""
-        output = []
-        output.append(self.access_address(segment, index))
-
-        return '\n'.join(output)
-
     def access_address(self, segment: str, index: int) -> str:
+        """Set D to the value at the address"""
         if segment == 'static':
-            return self.set_d_to_value_at_static(index)
+            # TODO: static should be module name.
+            return f'@static.{index}'
         elif segment == 'constant':
-            return self.set_d_to_constant(index)
+            return f'@{index}'
         elif segment == 'temp':
             pass
         elif segment == 'pointer':
             pass
         else:
-            return self.set_d_to_value_at_segment(segment, index)
-
-    def set_d_to_value_at_static(self, index: int) -> str:
-        """Set D to the value at the specified static index."""
-        # TODO: Replace static with module name
-        return '\n'.join([f'@static.{index}', 'D=M'])
-
-    def set_d_to_constant(self, index: int) -> str:
-        """Set D to a given constant."""
-        return '\n'.join([f'@{index}', 'D=A'])
+            raise NotImplementedError('Cannot access that segment')
 
     def set_d_to_value_at_segment(self, segment: str, index: int) -> str:
         """Set d to value at segment."""
@@ -243,13 +234,6 @@ class Writer:
         output.append('D=M')
         return '\n'.join(output)
 
-    def set_address_to_d(self, segment: str, index: int) -> str:
-        """Set value at the address to D."""
-        output = []
-        output.append(self.access_address(segment, index))
-        output.append('M=D')
-        return '\n'.join(output)
-
     # STACK
     def push_d_to_stack(self) -> str:
         """Push the current value in the D slot to the top of the stack."""
@@ -258,12 +242,6 @@ class Writer:
     def pop_d_from_stack(self) -> str:
         """Pop the stack to D."""
         return '\n'.join(['@SP', 'M=M-1', 'A=M', 'D=M'])
-
-    # ARITHMETIC
-    def add_stack(self) -> str:
-        """Add the top two values on the stack."""
-        return '\n'.join(['// add', '@SP', 'M=M-1', '', '@SP', 'A=M', 'D=M', '', '@SP',
-                          'M=M-1', '', '@SP', 'A=M', 'M=M+D'])
 
 
 ARITHMETIC_CODE = {'add': '\n'.join(['', '// add', '@SP', 'M=M-1', '', '@SP', 'A=M',
@@ -288,4 +266,4 @@ def main():
 
 if __name__ == '__main__':
     main()
-    #test()
+    # test()

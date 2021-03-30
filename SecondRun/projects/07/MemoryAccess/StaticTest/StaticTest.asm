@@ -30,7 +30,6 @@ A=M
 D=M
 
 @static.8
-D=M
 M=D
 // pop static 3
 @SP
@@ -39,7 +38,6 @@ A=M
 D=M
 
 @static.3
-D=M
 M=D
 // pop static 1
 @SP
@@ -48,7 +46,6 @@ A=M
 D=M
 
 @static.1
-D=M
 M=D
 // push static 3
 @static.3

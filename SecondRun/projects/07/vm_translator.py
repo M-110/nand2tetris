@@ -90,7 +90,7 @@ class Parser:
         """Parse an individual row and return a command named tuple containing
         its instructions."""
         row = self._remove_comments_and_whitespace(row)
-        
+
         # if row doesn't contain a command, return None
         if not row:
             return
@@ -125,7 +125,7 @@ class Writer:
     def __init__(self, commands: List[Command], output_file: str):
         self.commands = commands
         self.output_file = output_file
-        self.asm_commands: List[str] = []
+        self.asm_commands: List[str] = ['// Compiled using vm_translator.py\n',]
 
     def write_and_save(self):
         self.parse_commands()
@@ -166,7 +166,7 @@ class Writer:
 
     ### COMMAND PARSERS
     def arithmetic_parser(self, command: Command) -> str:
-        pass
+        return ARITHMETIC_CODE[command.arg1]
 
     def push_parser(self, command: Command) -> str:
         output = []
@@ -206,7 +206,7 @@ class Writer:
         """Get the value at the address and store it as D."""
         output = []
         output.append(self.access_address(segment, index))
-         
+
         return '\n'.join(output)
 
     def access_address(self, segment: str, index: int) -> str:
@@ -220,7 +220,6 @@ class Writer:
             pass
         else:
             return self.set_d_to_value_at_segment(segment, index)
-        
 
     def set_d_to_value_at_static(self, index: int) -> str:
         """Set D to the value at the specified static index."""
@@ -230,7 +229,7 @@ class Writer:
     def set_d_to_constant(self, index: int) -> str:
         """Set D to a given constant."""
         return '\n'.join([f'@{index}', 'D=A'])
-    
+
     def set_d_to_value_at_segment(self, segment: str, index: int) -> str:
         """Set d to value at segment."""
         target = segment_dict[segment]
@@ -260,19 +259,33 @@ class Writer:
         """Pop the stack to D."""
         return '\n'.join(['@SP', 'M=M-1', 'A=M', 'D=M'])
 
+    # ARITHMETIC
+    def add_stack(self) -> str:
+        """Add the top two values on the stack."""
+        return '\n'.join(['// add', '@SP', 'M=M-1', '', '@SP', 'A=M', 'D=M', '', '@SP',
+                          'M=M-1', '', '@SP', 'A=M', 'M=M+D'])
 
 
+ARITHMETIC_CODE = {'add': '\n'.join(['', '// add', '@SP', 'M=M-1', '', '@SP', 'A=M',
+                                     'D=M', '', '@SP', 'M=M-1', '', '@SP', 'A=M',
+                                     'M=M+D', '']),
+                   'sub': '\n'.join(['', '// sub', '@SP', 'M=M-1', '', '@SP', 'A=M',
+                                     'D=M', '', '@SP', 'M=M-1', '', '@SP', 'A=M',
+                                     'M=M-D', '', '@SP', 'M=M+1', ''])}
+
+
+def test():
+    cmd = Command(CommandType.ARITHMETIC, 'add', None)
+    writer = Writer(None, None)
+    print(writer.parse_command(cmd))
 
 
 def main():
     file = 'MemoryAccess\\StaticTest\\StaticTest.vm'
-    output_file = 'MemoryAccess\\StaticTest\\StaticTest.asm'
-    translator = VMTranslator(file, output_file)
-    translator.parse_and_write()
+    translator = VMTranslator(file)
+    translator.compile()
 
 
 if __name__ == '__main__':
     main()
-
-
-
+    #test()

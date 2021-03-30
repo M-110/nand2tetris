@@ -1,6 +1,6 @@
     
     // set location of pointer
-    @100
+    @256
     D=A
 
     @SP

@@ -1,3 +1,4 @@
+// Compiled using vm_translator.py
 // push constant 111
 @111
 D=A
@@ -65,6 +66,24 @@ D=M
 M=M+1
 A=M-1
 M=D
+
+// sub
+@SP
+M=M-1
+
+@SP
+A=M
+D=M
+
+@SP
+M=M-1
+
+@SP
+A=M
+M=M-D
+
+@SP
+M=M+1
 // push static 8
 @static.8
 D=M
@@ -73,3 +92,18 @@ D=M
 M=M+1
 A=M-1
 M=D
+
+// add
+@SP
+M=M-1
+
+@SP
+A=M
+D=M
+
+@SP
+M=M-1
+
+@SP
+A=M
+M=M+D

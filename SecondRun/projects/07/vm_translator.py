@@ -126,6 +126,7 @@ class Writer:
         self.commands = commands
         self.output_file = output_file
         self.asm_commands: List[str] = ['// Compiled using vm_translator.py\n', ]
+        self.logic_counts = {'eq': 0, 'gt': 0, 'lt': 0}
 
     def write_and_save(self):
         self.parse_commands()
@@ -166,7 +167,10 @@ class Writer:
 
     ### COMMAND PARSERS
     def arithmetic_parser(self, command: Command) -> str:
-        return ARITHMETIC_CODE[command.arg1]
+        if command.arg1 in ['add', 'sub']:
+            return f'// {command.arg1}\n' + ARITHMETIC_CODE[command.arg1]
+        else:
+            return f'// {command.arg1}\n' + self.comparison(command)
 
     def push_parser(self, command: Command) -> str:
         output = []
@@ -220,7 +224,7 @@ class Writer:
             return f'@{index + 5}'
         else:
             return self.access_segment_address_from_pointer(segment, index)
-            
+
     def access_segment_address_from_pointer(self, segment: str, index: int) -> str:
         """Set A to the address of the segment index."""
         target = segment_dict[segment]
@@ -232,7 +236,17 @@ class Writer:
             for _ in range(index - 1):
                 output.append('A=A+1')
         return '\n'.join(output)
-    
+
+    def comparison(self, command: Command) -> str:
+        """Generate code for a stack logical comparison"""
+        self.logic_counts[command.arg1] += 1
+        count = self.logic_counts[command.arg1]
+        arg = command.arg1.upper()
+        return '\n'.join(['@SP', 'M=M-1', '', '@SP', 'A=M', 'D=M',
+                          '@SP', 'A=M-1', 'D=M-D', 'M=1',
+                          f'@END_{arg}_{count}', f'D; J{arg}', '', '@SP',
+                          'A=M-1', 'M=0', '', f'(END_{arg}_{count})', ''])
+
     # 
     # def set_d_to_value_at_segment(self, segment: str, index: int) -> str:
     #     """Set d to value at segment."""
@@ -257,11 +271,14 @@ class Writer:
         return '\n'.join(['@SP', 'M=M-1', 'A=M', 'D=M'])
 
 
-ARITHMETIC_CODE = {'add': '\n'.join(['', '// add', '@SP', 'M=M-1', 'A=M', 'D=M',
+ARITHMETIC_CODE = {'add': '\n'.join(['@SP', 'M=M-1', 'A=M', 'D=M',
                                      '', '@SP', 'A=M-1', 'M=M+D', '']),
-                   'sub': '\n'.join(['', '// sub', '@SP', 'M=M-1', '', '@SP', 'A=M',
-                                     'D=M', '', '@SP', 'M=M-1', '', '@SP', 'A=M',
-                                     'M=M-D', '', '@SP', 'M=M+1', ''])}
+                   'sub': '\n'.join(['@SP', 'M=M-1', '', '@SP',
+                                     'A=M', 'D=M', '', '@SP', 'A=M-1', 'M=M-D']),
+                   'eq': '\n'.join(['@SP', 'M=M-1', '', '@SP', 'A=M', 'D=M',
+                                    '@SP', 'A=M-1', 'D=M-D', 'M=1',
+                                    '@END_EQ_{count}', 'D; JEQ', '', '@SP',
+                                    'A=M-1', 'M=0', '', '(END_EQ_{count})'])}
 
 
 def test():
@@ -271,12 +288,12 @@ def test():
 
 
 def main():
-    #file = 'MemoryAccess\\BasicTest\\BasicTest.vm'
-    #file = 'MemoryAccess\\StaticTest\\StaticTest.vm'
-    #file = 'MemoryAccess\\PointerTest\\PointerTest.vm'
-    #file = 'MemoryAccess\\Playground\\Playground.vm'
-    file = 'StackArithmetic\\SimpleAdd\\SimpleAdd.vm'
-    #file = 'StackArithmetic\\StackTest\\StackTest.vm'
+    # file = 'MemoryAccess\\BasicTest\\BasicTest.vm'
+    # file = 'MemoryAccess\\StaticTest\\StaticTest.vm'
+    # file = 'MemoryAccess\\PointerTest\\PointerTest.vm'
+    file = 'MemoryAccess\\Playground\\Playground.vm'
+    # file = 'StackArithmetic\\SimpleAdd\\SimpleAdd.vm'
+    # file = 'StackArithmetic\\StackTest\\StackTest.vm'
     translator = VMTranslator(file)
     translator.compile()
 

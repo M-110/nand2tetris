@@ -172,7 +172,7 @@ class Writer:
         output = []
         output.append(f'// push {command.arg1} {command.arg2}')
         # output.append(self.set_d_to_value_at_address(command.arg1, command.arg2))
-        output.append(self.access_address(command.arg1, command.arg2))
+        output.append(self.access_segment_address(command.arg1, command.arg2))
         if command.arg1 == "constant":
             output.append('D=A')
         else:
@@ -187,7 +187,7 @@ class Writer:
         output.append(f'// pop {command.arg1} {command.arg2}')
         output.append(self.pop_d_from_stack())
         output.append('')
-        output.append(self.access_address(command.arg1, command.arg2))
+        output.append(self.access_segment_address(command.arg1, command.arg2))
         output.append('M=D')
         output.append('')
         return '\n'.join(output)
@@ -207,22 +207,22 @@ class Writer:
     def call_parser(self, command: Command) -> str:
         pass
 
-    def access_address(self, segment: str, index: int) -> str:
+    def access_segment_address(self, segment: str, index: int) -> str:
         """Set D to the value at the address"""
         if segment == 'static':
             # TODO: static should be module name.
             return f'@static.{index}'
         elif segment == 'constant':
             return f'@{index}'
-        elif segment == 'temp':
-            pass
         elif segment == 'pointer':
-            pass
+            return f'@{index + 3}'
+        elif segment == 'temp':
+            return f'@{index + 5}'
         else:
-            raise NotImplementedError('Cannot access that segment')
-
-    def set_d_to_value_at_segment(self, segment: str, index: int) -> str:
-        """Set d to value at segment."""
+            return self.access_segment_address_from_pointer(segment, index)
+            
+    def access_segment_address_from_pointer(self, segment: str, index: int) -> str:
+        """Set A to the address of the segment index."""
         target = segment_dict[segment]
         output = [f'@{target}']
         if index == 0:
@@ -231,8 +231,21 @@ class Writer:
             output.append('A=M+1')
             for _ in range(index - 1):
                 output.append('A=A+1')
-        output.append('D=M')
         return '\n'.join(output)
+    
+    # 
+    # def set_d_to_value_at_segment(self, segment: str, index: int) -> str:
+    #     """Set d to value at segment."""
+    #     target = segment_dict[segment]
+    #     output = [f'@{target}']
+    #     if index == 0:
+    #         output.append('A=M')
+    #     else:
+    #         output.append('A=M+1')
+    #         for _ in range(index - 1):
+    #             output.append('A=A+1')
+    #     output.append('D=M')
+    #     return '\n'.join(output)
 
     # STACK
     def push_d_to_stack(self) -> str:
@@ -244,9 +257,8 @@ class Writer:
         return '\n'.join(['@SP', 'M=M-1', 'A=M', 'D=M'])
 
 
-ARITHMETIC_CODE = {'add': '\n'.join(['', '// add', '@SP', 'M=M-1', '', '@SP', 'A=M',
-                                     'D=M', '', '@SP', 'M=M-1', '', '@SP', 'A=M',
-                                     'M=M+D', '']),
+ARITHMETIC_CODE = {'add': '\n'.join(['', '// add', '@SP', 'M=M-1', 'A=M', 'D=M',
+                                     '', '@SP', 'A=M-1', 'M=M+D', '']),
                    'sub': '\n'.join(['', '// sub', '@SP', 'M=M-1', '', '@SP', 'A=M',
                                      'D=M', '', '@SP', 'M=M-1', '', '@SP', 'A=M',
                                      'M=M-D', '', '@SP', 'M=M+1', ''])}
@@ -259,7 +271,12 @@ def test():
 
 
 def main():
-    file = 'MemoryAccess\\StaticTest\\StaticTest.vm'
+    #file = 'MemoryAccess\\BasicTest\\BasicTest.vm'
+    #file = 'MemoryAccess\\StaticTest\\StaticTest.vm'
+    #file = 'MemoryAccess\\PointerTest\\PointerTest.vm'
+    #file = 'MemoryAccess\\Playground\\Playground.vm'
+    file = 'StackArithmetic\\SimpleAdd\\SimpleAdd.vm'
+    #file = 'StackArithmetic\\StackTest\\StackTest.vm'
     translator = VMTranslator(file)
     translator.compile()
 

@@ -1,7 +1,7 @@
+// Compiled using vm_translator.py
 // push constant 10
 @10
-D=M
-D=M
+D=A
 
 @SP
 M=M+1
@@ -18,8 +18,7 @@ A=M
 M=D
 // push constant 21
 @21
-D=M
-D=M
+D=A
 
 @SP
 M=M+1
@@ -27,8 +26,7 @@ A=M-1
 M=D
 // push constant 22
 @22
-D=M
-D=M
+D=A
 
 @SP
 M=M+1
@@ -55,8 +53,7 @@ A=M+1
 M=D
 // push constant 36
 @36
-D=M
-D=M
+D=A
 
 @SP
 M=M+1
@@ -78,8 +75,7 @@ A=A+1
 M=D
 // push constant 42
 @42
-D=M
-D=M
+D=A
 
 @SP
 M=M+1
@@ -87,8 +83,7 @@ A=M-1
 M=D
 // push constant 45
 @45
-D=M
-D=M
+D=A
 
 @SP
 M=M+1
@@ -119,8 +114,7 @@ A=A+1
 M=D
 // push constant 510
 @510
-D=M
-D=M
+D=A
 
 @SP
 M=M+1
@@ -132,13 +126,7 @@ M=M-1
 A=M
 D=M
 
-@TEMP
-A=M+1
-A=A+1
-A=A+1
-A=A+1
-A=A+1
-A=A+1
+@11
 M=D
 // push local 0
 @LCL
@@ -162,6 +150,16 @@ D=M
 M=M+1
 A=M-1
 M=D
+
+// add
+@SP
+M=M-1
+A=M
+D=M
+
+@SP
+A=M-1
+M=M+D
 // push argument 1
 @ARG
 A=M+1
@@ -171,6 +169,24 @@ D=M
 M=M+1
 A=M-1
 M=D
+
+// sub
+@SP
+M=M-1
+
+@SP
+A=M
+D=M
+
+@SP
+M=M-1
+
+@SP
+A=M
+M=M-D
+
+@SP
+M=M+1
 // push this 6
 @THIS
 A=M+1
@@ -199,17 +215,49 @@ D=M
 M=M+1
 A=M-1
 M=D
+
+// add
+@SP
+M=M-1
+A=M
+D=M
+
+@SP
+A=M-1
+M=M+D
+
+// sub
+@SP
+M=M-1
+
+@SP
+A=M
+D=M
+
+@SP
+M=M-1
+
+@SP
+A=M
+M=M-D
+
+@SP
+M=M+1
 // push temp 6
-@TEMP
-A=M+1
-A=A+1
-A=A+1
-A=A+1
-A=A+1
-A=A+1
+@11
 D=M
 
 @SP
 M=M+1
 A=M-1
 M=D
+
+// add
+@SP
+M=M-1
+A=M
+D=M
+
+@SP
+A=M-1
+M=M+D

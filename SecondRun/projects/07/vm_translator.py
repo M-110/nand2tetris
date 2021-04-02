@@ -245,7 +245,7 @@ class Writer:
         count = self.logic_counts[command.arg1]
         arg = command.arg1.upper()
         return '\n'.join(['@SP', 'M=M-1', '', '@SP', 'A=M', 'D=M',
-                          '@SP', 'A=M-1', 'D=M-D', 'M=1',
+                          '@SP', 'A=M-1', 'D=M-D', 'M=-1',
                           f'@END_{arg}_{count}', f'D; J{arg}', '', '@SP',
                           'A=M-1', 'M=0', '', f'(END_{arg}_{count})', ''])
 
@@ -279,7 +279,7 @@ ARITHMETIC_CODE = {'add': '\n'.join(['@SP', 'M=M-1', 'A=M', 'D=M',
                                      'A=M', 'D=M', '', '@SP', 'A=M-1', 'M=M-D'])}
 
 LOGICAL_CODE = {'neg': '\n'.join(['@SP', 'A=M-1', 'M=-M']),
-                'not': '\n'.join(['@SP', 'A=M-1', 'A=!M']),
+                'not': '\n'.join(['@SP', 'A=M-1', 'M=!M']),
                 'and': '\n'.join(['@SP', 'M=M-1', 'A=M', 'D=M', 'A=A-1', 'M=D&M']),
                 'or': '\n'.join(['@SP', 'M=M-1', 'A=M', 'D=M', 'A=A-1', 'M=D|M'])}
 
@@ -291,14 +291,14 @@ def test():
 
 
 def main():
-    # file = 'MemoryAccess\\BasicTest\\BasicTest.vm'
-    # file = 'MemoryAccess\\StaticTest\\StaticTest.vm'
-    # file = 'MemoryAccess\\PointerTest\\PointerTest.vm'
-    # file = 'MemoryAccess\\Playground\\Playground.vm'
-    # file = 'StackArithmetic\\SimpleAdd\\SimpleAdd.vm'
-    file = 'StackArithmetic\\StackTest\\StackTest.vm'
-    translator = VMTranslator(file)
-    translator.compile()
+    files = ['MemoryAccess\\BasicTest\\BasicTest.vm',
+             'MemoryAccess\\StaticTest\\StaticTest.vm',
+             'MemoryAccess\\PointerTest\\PointerTest.vm',
+             'StackArithmetic\\StackTest\\StackTest.vm',
+             'StackArithmetic\\SimpleAdd\\SimpleAdd.vm']
+    for file in files:
+        translator = VMTranslator(file)
+        translator.compile()
 
 
 if __name__ == '__main__':

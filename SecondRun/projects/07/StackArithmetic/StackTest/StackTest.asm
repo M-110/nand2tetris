@@ -27,7 +27,7 @@ D=M
 @SP
 A=M-1
 D=M-D
-M=1
+M=-1
 @END_EQ_1
 D; JEQ
 
@@ -65,7 +65,7 @@ D=M
 @SP
 A=M-1
 D=M-D
-M=1
+M=-1
 @END_EQ_2
 D; JEQ
 
@@ -103,7 +103,7 @@ D=M
 @SP
 A=M-1
 D=M-D
-M=1
+M=-1
 @END_EQ_3
 D; JEQ
 
@@ -141,7 +141,7 @@ D=M
 @SP
 A=M-1
 D=M-D
-M=1
+M=-1
 @END_LT_1
 D; JLT
 
@@ -179,7 +179,7 @@ D=M
 @SP
 A=M-1
 D=M-D
-M=1
+M=-1
 @END_LT_2
 D; JLT
 
@@ -217,7 +217,7 @@ D=M
 @SP
 A=M-1
 D=M-D
-M=1
+M=-1
 @END_LT_3
 D; JLT
 
@@ -255,7 +255,7 @@ D=M
 @SP
 A=M-1
 D=M-D
-M=1
+M=-1
 @END_GT_1
 D; JGT
 
@@ -293,7 +293,7 @@ D=M
 @SP
 A=M-1
 D=M-D
-M=1
+M=-1
 @END_GT_2
 D; JGT
 
@@ -331,7 +331,7 @@ D=M
 @SP
 A=M-1
 D=M-D
-M=1
+M=-1
 @END_GT_3
 D; JGT
 
@@ -427,4 +427,4 @@ M=D|M
 // not
 @SP
 A=M-1
-A=!M
+M=!M

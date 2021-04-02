@@ -1,5 +1,36 @@
 // push constant 2
-@500
+@123
+D=A
+
+@SP
+M=M+1
+A=M-1
+M=D
+// push constant 2
+@343
+D=A
+
+@SP
+M=M+1
+A=M-1
+M=D
+// neg
+
+@SP
+A=M-1
+M=-M
+
+
+// push constant 2
+@9
+D=A
+
+@SP
+M=M+1
+A=M-1
+M=D
+// push constant 2
+@44
 D=A
 
 @SP
@@ -7,33 +38,23 @@ M=M+1
 A=M-1
 M=D
 
-// push constant 1
-@300
-D=A
-
-@SP
-M=M+1
-A=M-1
-M=D
-
-// gt
+// and
 @SP
 M=M-1
-
-@SP
 A=M
 D=M
+A=A-1
+M=D&M
 
+// or
+@SP
+M=M-1
+A=M
+D=M
+A=A-1
+M=D|M
+
+// not
 @SP
 A=M-1
-D=M-D
-M=1 // Set to True
-
-@END_GT_1
-D; JGT // If D is 0, then skip
-       // else Set to False
-@SP
-A=M-1
-M=0
-
-(END_GT_1)
+M=!M

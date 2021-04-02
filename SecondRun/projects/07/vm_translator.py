@@ -134,7 +134,7 @@ class Writer:
 
     def parse_commands(self):
         for command in self.commands:
-            c = self.parse_command(command)
+            c = self.parse_command(command) + '\n'
             self.asm_commands.append(c)
 
     def save_output(self):
@@ -167,8 +167,10 @@ class Writer:
 
     ### COMMAND PARSERS
     def arithmetic_parser(self, command: Command) -> str:
-        if command.arg1 in ['add', 'sub']:
+        if command.arg1 in ARITHMETIC_CODE:
             return f'// {command.arg1}\n' + ARITHMETIC_CODE[command.arg1]
+        elif command.arg1 in LOGICAL_CODE:
+            return f'// {command.arg1}\n' + LOGICAL_CODE[command.arg1]
         else:
             return f'// {command.arg1}\n' + self.comparison(command)
 
@@ -272,13 +274,14 @@ class Writer:
 
 
 ARITHMETIC_CODE = {'add': '\n'.join(['@SP', 'M=M-1', 'A=M', 'D=M',
-                                     '', '@SP', 'A=M-1', 'M=M+D', '']),
+                                     '', '@SP', 'A=M-1', 'M=M+D']),
                    'sub': '\n'.join(['@SP', 'M=M-1', '', '@SP',
-                                     'A=M', 'D=M', '', '@SP', 'A=M-1', 'M=M-D']),
-                   'eq': '\n'.join(['@SP', 'M=M-1', '', '@SP', 'A=M', 'D=M',
-                                    '@SP', 'A=M-1', 'D=M-D', 'M=1',
-                                    '@END_EQ_{count}', 'D; JEQ', '', '@SP',
-                                    'A=M-1', 'M=0', '', '(END_EQ_{count})'])}
+                                     'A=M', 'D=M', '', '@SP', 'A=M-1', 'M=M-D'])}
+
+LOGICAL_CODE = {'neg': '\n'.join(['@SP', 'A=M-1', 'M=-M']),
+                'not': '\n'.join(['@SP', 'A=M-1', 'A=!M']),
+                'and': '\n'.join(['@SP', 'M=M-1', 'A=M', 'D=M', 'A=A-1', 'M=D&M']),
+                'or': '\n'.join(['@SP', 'M=M-1', 'A=M', 'D=M', 'A=A-1', 'M=D|M'])}
 
 
 def test():
@@ -291,9 +294,9 @@ def main():
     # file = 'MemoryAccess\\BasicTest\\BasicTest.vm'
     # file = 'MemoryAccess\\StaticTest\\StaticTest.vm'
     # file = 'MemoryAccess\\PointerTest\\PointerTest.vm'
-    file = 'MemoryAccess\\Playground\\Playground.vm'
+    # file = 'MemoryAccess\\Playground\\Playground.vm'
     # file = 'StackArithmetic\\SimpleAdd\\SimpleAdd.vm'
-    # file = 'StackArithmetic\\StackTest\\StackTest.vm'
+    file = 'StackArithmetic\\StackTest\\StackTest.vm'
     translator = VMTranslator(file)
     translator.compile()
 

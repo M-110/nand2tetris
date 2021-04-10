@@ -236,7 +236,7 @@ M=D
         return '\n'.join(['@SP', 'M=M-1', 'A=M', 'D=M', f'@{command.arg1}', 'D;JGT'])
 
     def function_parser(self, command: Command) -> str:
-        return f'//{command!r} not implemented.'
+        return f'\n({command.arg1})' + self.push_0_to_stack(command.arg2)
 
     def return_parser(self, command: Command) -> str:
         return f'//{command!r} not implemented.'
@@ -302,6 +302,12 @@ M=D
     def pop_d_from_stack(self) -> str:
         """Pop the stack to D."""
         return '\n'.join(['@SP', 'M=M-1', 'A=M', 'D=M'])
+    
+    def push_0_to_stack(self, n: int) -> str:
+        """Push 0 to stock n times."""
+        return '\n'.join(['\n'.join(['', '@SP', 'M=M+1', 'A=M-1', 'M=0'])
+                          for _ in range(n)])
+            
 
 
 ARITHMETIC_CODE = {'add': '\n'.join(['@SP', 'M=M-1', 'A=M', 'D=M',

@@ -8,8 +8,13 @@ D=A
 M=D
 
 //call Sys.init
-//Command(command_type=<CommandType.FUNCTION: 7>, arg1='SimpleFunction.test', arg2=2) not implemented.
+
 (SimpleFunction.test)
+@SP
+M=M+1
+A=M-1
+M=0
+
 @SP
 M=M+1
 A=M-1

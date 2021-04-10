@@ -1,5 +1,14 @@
-// Compiled using vm_translator.py
-// push constant 10
+
+        // Compiled using vm_translator.py
+        // Bootstrap (Set SP to 256 and call Sys.init):
+        @256
+        D=A
+        
+        @SP
+        M=D
+        
+        call Sys.init
+        // push constant 10
 @10
 D=A
 

@@ -4,7 +4,7 @@ from typing import List, Generator
 import re
 
 # Each command named tuple stores 1 line of vm code.
-Command = namedtuple('Command', 'command_type arg1 arg2', defaults=[None, None])
+Command = namedtuple('Command', 'command_type arg1 arg2')
 
 ARITHMETIC_COMMANDS = {'add', 'sub', 'neg', 'eq', 'gt', 'lt', 'and', 'or', 'not'}
 
@@ -98,11 +98,23 @@ class Parser:
         command, *args = row.split(' ')
 
         if command.lower() in ARITHMETIC_COMMANDS:
-            return Command(CommandType.ARITHMETIC, command)
+            return Command(CommandType.ARITHMETIC, command, None)
         elif command.lower() == "push":
             return Command(CommandType.PUSH, args[0], int(args[1]))
         elif command.lower() == "pop":
             return Command(CommandType.POP, args[0], int(args[1]))
+        elif command.lower() == "label":
+            return Command(CommandType.LABEL, args[0], None)
+        elif command.lower() == "goto":
+            return Command(CommandType.GOTO, args[0], None)
+        elif command.lower() == "if-goto":
+            return Command(CommandType.IF, args[0], None)
+        elif command.lower() == "function":
+            return Command(CommandType.FUNCTION, args[0], int(args[1]))
+        elif command.lower() == "return":
+            return Command(CommandType.RETURN, None, None)
+        elif command.lower() == "call":
+            return Command(CommandType.CALL, args[0], int(args[1]))
         else:
             raise NotImplementedError(f"Parser handling for {command!r} not yet implemented.")
 
@@ -125,7 +137,8 @@ class Writer:
     def __init__(self, commands: List[Command], output_file: str):
         self.commands = commands
         self.output_file = output_file
-        self.asm_commands: List[str] = ['// Compiled using vm_translator.py\n', ]
+        self.asm_commands: List[str] = []
+        self.add_bootstrap()
         self.logic_counts = {'eq': 0, 'gt': 0, 'lt': 0}
 
     def write_and_save(self):
@@ -144,6 +157,20 @@ class Writer:
                     continue
                 file.write(asm_command)
         print(f'Saved file as {self.output_file!r}')
+        
+    def add_bootstrap(self):
+        self.asm_commands.append("""
+        // Compiled using vm_translator_old.py
+        // Bootstrap (Set SP to 256 and call Sys.init):
+        @256
+        D=A
+        
+        @SP
+        M=D
+        
+        call Sys.init
+        """)
+        # TODO REPLACE call with assembly code
 
     def parse_command(self, command) -> str:
         if command.command_type == CommandType.ARITHMETIC:

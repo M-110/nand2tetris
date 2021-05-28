@@ -4,12 +4,13 @@ from typing import List, Generator
 import re
 
 # Each command named tuple stores 1 line of vm code.
-Command = namedtuple('Command', 'command_type arg1 arg2')
+Command = namedtuple('Command', 'command_type arg1 arg2', defaults=[None, None])
 
 ARITHMETIC_COMMANDS = {'add', 'sub', 'neg', 'eq', 'gt', 'lt', 'and', 'or', 'not'}
 
 
 class CommandType(Enum):
+    """Enum of the type of command."""
     ARITHMETIC = 1
     PUSH = 2
     POP = 3
@@ -35,7 +36,7 @@ class VMTranslator:
     information between the two.
     
     Args:
-        input_vm_file: the file location of a .vm file to be compiled.
+        input_vm_file: The file location of a .vm file to be compiled.
     """
 
     def __init__(self, input_vm_file: str):
@@ -98,27 +99,16 @@ class Parser:
         command, *args = row.split(' ')
 
         if command.lower() in ARITHMETIC_COMMANDS:
-            return Command(CommandType.ARITHMETIC, command, None)
+            return Command(CommandType.ARITHMETIC, command)
         elif command.lower() == "push":
             return Command(CommandType.PUSH, args[0], int(args[1]))
         elif command.lower() == "pop":
             return Command(CommandType.POP, args[0], int(args[1]))
-        elif command.lower() == "label":
-            return Command(CommandType.LABEL, args[0], None)
-        elif command.lower() == "goto":
-            return Command(CommandType.GOTO, args[0], None)
-        elif command.lower() == "if-goto":
-            return Command(CommandType.IF, args[0], None)
-        elif command.lower() == "function":
-            return Command(CommandType.FUNCTION, args[0], int(args[1]))
-        elif command.lower() == "return":
-            return Command(CommandType.RETURN, None, None)
-        elif command.lower() == "call":
-            return Command(CommandType.CALL, args[0], int(args[1]))
         else:
             raise NotImplementedError(f"Parser handling for {command!r} not yet implemented.")
 
-    def _remove_comments_and_whitespace(self, row: str) -> str:
+    @staticmethod
+    def _remove_comments_and_whitespace(row: str) -> str:
         """Remove any outer white space, remove comments, and reduce
          inner whitespace to one space."""
         row = re.sub(r'\s+', ' ', row).strip()
@@ -137,9 +127,8 @@ class Writer:
     def __init__(self, commands: List[Command], output_file: str):
         self.commands = commands
         self.output_file = output_file
-        self.asm_commands: List[str] = []
-        self.add_bootstrap()
-        self.label_counts = {'eq': 0, 'gt': 0, 'lt': 0, 'call': 0}
+        self.asm_commands: List[str] = ['// Compiled using vm_translator.py\n', ]
+        self.logic_counts = {'eq': 0, 'gt': 0, 'lt': 0}
 
     def write_and_save(self):
         self.parse_commands()
@@ -158,19 +147,6 @@ class Writer:
                 file.write(asm_command)
         print(f'Saved file as {self.output_file!r}')
 
-    def add_bootstrap(self):
-        self.asm_commands.append("""
-// Compiled using vm_translator_old.py
-// Bootstrap (Set SP to 256 and call Sys.init):
-@256
-D=A
-
-@SP
-M=D
-
-//call Sys.init\n""")
-        # TODO REPLACE call with assembly code
-
     def parse_command(self, command) -> str:
         if command.command_type == CommandType.ARITHMETIC:
             return self.arithmetic_parser(command)
@@ -180,8 +156,6 @@ M=D
             return self.pop_parser(command)
         elif command.command_type == CommandType.LABEL:
             return self.label_parser(command)
-        elif command.command_type == CommandType.GOTO:
-            return self.goto_parser(command)
         elif command.command_type == CommandType.IF:
             return self.if_parser(command)
         elif command.command_type == CommandType.FUNCTION:
@@ -193,7 +167,7 @@ M=D
         else:
             raise ValueError(f'{command.command_type!r} is an invalid command')
 
-    ### COMMAND PARSERS
+    # COMMAND PARSERS
     def arithmetic_parser(self, command: Command) -> str:
         if command.arg1 in ARITHMETIC_CODE:
             return f'// {command.arg1}\n' + ARITHMETIC_CODE[command.arg1]
@@ -227,97 +201,19 @@ M=D
         return '\n'.join(output)
 
     def label_parser(self, command: Command) -> str:
-        return f'({command.arg1})'
-
-    def goto_parser(self, command: Command) -> str:
-        return '\n'.join([f'@{command.arg1}', '0;JMP'])
+        pass
 
     def if_parser(self, command: Command) -> str:
-        return '\n'.join(['@SP', 'M=M-1', 'A=M', 'D=M', f'@{command.arg1}', 'D;JGT'])
+        pass
 
     def function_parser(self, command: Command) -> str:
-
-        return f'\n({command.arg1})' + self.push_0_to_stack(command.arg2)
+        pass
 
     def return_parser(self, command: Command) -> str:
-        output = ['// Return']
-        # endFrame = LCL
-        output.append('/n'.join(['@LCL',
-                                 'D=M',
-                                 '',
-                                 '@endFrame',
-                                 'M=D',
-                                 '']))
-        # retAddress = *(endFrame - 5)
-        output.append('\n'.join(['@LCL',
-                                 'D=A',
-                                 '']))
-        output.append(self.push_d_to_stack())
-        output.append(self.push_parser(Command(CommandType.PUSH, 'constant', 5)))
-        output.append(self.arithmetic_parser(Command(CommandType.ARITHMETIC, 'sub', None)))
-        output.append(self.pop_d_from_stack())
-        output.append('\n'.join(['A=D',
-                                 'D=M',
-                                 '',
-                                 '@retAddress',
-                                 'M=D',
-                                 '']))
-        # *ARG = pop()
-        output.append('\n'.join(['@ARG',
-                                 'A=M',
-                                 '']))
-        output.append(self.pop_d_from_stack())
-        output.append('M=D')
-
-        # SP = ARG + 1
-        output.append('\n'.join(['@ARG',
-                                 'D=M+1',
-                                 '',
-                                 '@SP',
-                                 'M=D']))
-        # THAT = *(endFrame - 1)
-        # THIS = *(endFrame - 2)
-        # ARG = *(endFrame - 3)
-        # LCL = *(endFrame - 4)
-        # goto retAddress
-        ...
+        pass
 
     def call_parser(self, command: Command) -> str:
-        output = []
-        # Push returnAddress
-        self.label_counts['call'] += 1
-        output.append(f'@RETURN_ADDRESS_CALL_{self.label_counts["call"]}')
-        output.append('D=A')
-        output.append(self.push_d_to_stack())
-        # --SAVE THESE--
-        # Push LCL
-        output.append('\n'.join(['@LCL',
-                                 'D=M']))
-        output.append(self.push_d_to_stack())
-        # Push ARG
-        output.append('\n'.join(['@ARG',
-                                 'D=M']))
-        output.append(self.push_d_to_stack())
-        # Push THIS
-        output.append('\n'.join(['@THIS',
-                                 'D=M']))
-        output.append(self.push_d_to_stack())
-        # Push THAT
-        output.append('\n'.join(['@THAT',
-                                 'D=M']))
-        output.append(self.push_d_to_stack())
-        # --------------
-        # LCL = SP
-        output.append('\n'.join(['@SP',
-                                 'D=M',
-                                 '',
-                                 '@LCL',
-                                 '@M=D']))
-        # goto Function
-        output.append('\n'.join([f'@{command.arg1}', '0;JMP']))
-        # Declare (returnAddress)
-        output.append(f'(RETURN_ADDRESS_CALL_{self.label_counts["call"]})')
-        return '\n'.join(output)
+        pass
 
     def access_segment_address(self, segment: str, index: int) -> str:
         """Set D to the value at the address"""
@@ -347,13 +243,27 @@ M=D
 
     def comparison(self, command: Command) -> str:
         """Generate code for a stack logical comparison"""
-        self.label_counts[command.arg1] += 1
-        count = self.label_counts[command.arg1]
+        self.logic_counts[command.arg1] += 1
+        count = self.logic_counts[command.arg1]
         arg = command.arg1.upper()
-        return '\n'.join(['@SP', 'M=M-1', '', '@SP', 'A=M', 'D=M',
-                          '@SP', 'A=M-1', 'D=M-D', 'M=-1',
-                          f'@END_{arg}_{count}', f'D; J{arg}', '', '@SP',
-                          'A=M-1', 'M=0', '', f'(END_{arg}_{count})', ''])
+        return '\n'.join(['@SP',
+                          'M=M-1',
+                          '',
+                          '@SP',
+                          'A=M',
+                          'D=M',
+                          '@SP',
+                          'A=M-1',
+                          'D=M-D',
+                          'M=-1',
+                          f'@END_{arg}_{count}',
+                          f'D; J{arg}',
+                          '',
+                          '@SP',
+                          'A=M-1',
+                          'M=0',
+                          '',
+                          f'(END_{arg}_{count})', ''])
 
     # 
     # def set_d_to_value_at_segment(self, segment: str, index: int) -> str:
@@ -378,11 +288,6 @@ M=D
         """Pop the stack to D."""
         return '\n'.join(['@SP', 'M=M-1', 'A=M', 'D=M'])
 
-    def push_0_to_stack(self, n: int) -> str:
-        """Push 0 to stock n times."""
-        return '\n'.join(['\n'.join(['', '@SP', 'M=M+1', 'A=M-1', 'M=0'])
-                          for _ in range(n)])
-
 
 ARITHMETIC_CODE = {'add': '\n'.join(['@SP', 'M=M-1', 'A=M', 'D=M',
                                      '', '@SP', 'A=M-1', 'M=M+D']),
@@ -403,8 +308,7 @@ def test():
 
 def main():
     files = ['ProgramFlow\\BasicLoop\\BasicLoop.vm',
-             'ProgramFlow\\FibonacciSeries\\FibonacciSeries.vm',
-             'FunctionCalls\\SimpleFunction\\SimpleFunction.vm']
+             'ProgramFlow\\FibonacciSeries\\FibonacciSeries.vm']
     for file in files:
         translator = VMTranslator(file)
         translator.compile()

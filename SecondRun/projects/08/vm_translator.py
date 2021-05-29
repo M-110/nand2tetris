@@ -147,6 +147,7 @@ class Writer:
 
     def parse_commands(self):
         for command in self.commands:
+            print(command)
             c = self.parse_command(command) + '\n'
             self.asm_commands.append(c)
 
@@ -159,16 +160,17 @@ class Writer:
         print(f'Saved file as {self.output_file!r}')
 
     def add_bootstrap(self):
-        self.asm_commands.append("""
-// Compiled using vm_translator_old.py
-// Bootstrap (Set SP to 256 and call Sys.init):
-@256
-D=A
-
-@SP
-M=D
-
-//call Sys.init\n""")
+        pass
+#         self.asm_commands.append("""
+# // Compiled using vm_translator_old.py
+# // Bootstrap (Set SP to 256 and call Sys.init):
+# @256
+# D=A
+# 
+# @SP
+# M=D
+# 
+# //call Sys.init\n""")
         # TODO REPLACE call with assembly code
 
     def parse_command(self, command) -> str:
@@ -242,7 +244,7 @@ M=D
     def return_parser(self, command: Command) -> str:
         output = ['// Return']
         # endFrame = LCL
-        output.append('/n'.join(['@LCL',
+        output.append('\n'.join(['@LCL',
                                  'D=M',
                                  '',
                                  '@endFrame',
@@ -250,25 +252,22 @@ M=D
                                  '']))
         # retAddress = *(endFrame - 5)
         output.append('\n'.join(['@LCL',
-                                 'D=A',
-                                 '']))
-        output.append(self.push_d_to_stack())
-        output.append(self.push_parser(Command(CommandType.PUSH, 'constant', 5)))
-        output.append(self.arithmetic_parser(Command(CommandType.ARITHMETIC, 'sub', None)))
-        output.append(self.pop_d_from_stack())
-        output.append('\n'.join(['A=D',
+                                 'D=M-1',
+                                 'D=D-1',
+                                 'D=D-1',
+                                 'D=D-1',
+                                 'D=D-1',
+                                 'A=D',
                                  'D=M',
                                  '',
                                  '@retAddress',
                                  'M=D',
                                  '']))
         # *ARG = pop()
+        output.append(self.pop_d_from_stack())
         output.append('\n'.join(['@ARG',
                                  'A=M',
-                                 '']))
-        output.append(self.pop_d_from_stack())
-        output.append('M=D')
-
+                                 'M=D']))
         # SP = ARG + 1
         output.append('\n'.join(['@ARG',
                                  'D=M+1',
@@ -276,11 +275,48 @@ M=D
                                  '@SP',
                                  'M=D']))
         # THAT = *(endFrame - 1)
+        output.append('\n'.join(['@endFrame',
+                                 'A=M-1',
+                                 'D=M',
+                                 '',
+                                 '@THAT',
+                                 'M=D',
+                                 '']))
         # THIS = *(endFrame - 2)
+        output.append('\n'.join(['@endFrame',
+                                 'D=M-1',
+                                 'A=D-1',
+                                 'D=M',
+                                 '',
+                                 '@THIS',
+                                 'M=D',
+                                 '']))
         # ARG = *(endFrame - 3)
+        output.append('\n'.join(['@endFrame',
+                                 'D=M-1',
+                                 'D=D-1',
+                                 'A=D-1',
+                                 'D=M',
+                                 '',
+                                 '@ARG',
+                                 'M=D',
+                                 '']))
         # LCL = *(endFrame - 4)
-        # goto retAddress
-        ...
+        output.append('\n'.join(['@endFrame',
+                                 'D=M-1',
+                                 'D=D-1',
+                                 'D=D-1',
+                                 'A=D-1',
+                                 'D=M',
+                                 '',
+                                 '@LCL',
+                                 'M=D',
+                                 '']))
+        # Goto retAddress
+        output.append('\n'.join([f'@retAddress',
+                                 'A=M',
+                                 '0;JMP']))
+        return '\n'.join(output)
 
     def call_parser(self, command: Command) -> str:
         output = []
@@ -314,6 +350,7 @@ M=D
                                  '@LCL',
                                  '@M=D']))
         # goto Function
+        # TODO: THIS IS NOT RIGHT
         output.append('\n'.join([f'@{command.arg1}', '0;JMP']))
         # Declare (returnAddress)
         output.append(f'(RETURN_ADDRESS_CALL_{self.label_counts["call"]})')
@@ -393,12 +430,6 @@ LOGICAL_CODE = {'neg': '\n'.join(['@SP', 'A=M-1', 'M=-M']),
                 'not': '\n'.join(['@SP', 'A=M-1', 'M=!M']),
                 'and': '\n'.join(['@SP', 'M=M-1', 'A=M', 'D=M', 'A=A-1', 'M=D&M']),
                 'or': '\n'.join(['@SP', 'M=M-1', 'A=M', 'D=M', 'A=A-1', 'M=D|M'])}
-
-
-def test():
-    cmd = Command(CommandType.ARITHMETIC, 'add', None)
-    writer = Writer(None, None)
-    print(writer.parse_command(cmd))
 
 
 def main():

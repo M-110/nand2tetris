@@ -1,13 +1,3 @@
-
-// Compiled using vm_translator_old.py
-// Bootstrap (Set SP to 256 and call Sys.init):
-@256
-D=A
-
-@SP
-M=D
-
-//call Sys.init
 // push constant 0
 @0
 D=A

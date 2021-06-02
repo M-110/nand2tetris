@@ -2,7 +2,6 @@
 @ARG
 A=M+1
 D=M
-
 @SP
 M=M+1
 A=M-1
@@ -16,11 +15,9 @@ D=M
 
 @4
 M=D
-
 // push constant 0
 @0
 D=A
-
 @SP
 M=M+1
 A=M-1
@@ -35,11 +32,9 @@ D=M
 @THAT
 A=M
 M=D
-
 // push constant 1
 @1
 D=A
-
 @SP
 M=M+1
 A=M-1
@@ -54,12 +49,10 @@ D=M
 @THAT
 A=M+1
 M=D
-
 // push argument 0
 @ARG
 A=M
 D=M
-
 @SP
 M=M+1
 A=M-1
@@ -68,7 +61,6 @@ M=D
 // push constant 2
 @2
 D=A
-
 @SP
 M=M+1
 A=M-1
@@ -94,32 +86,33 @@ D=M
 @ARG
 A=M
 M=D
-
+// label MAIN_LOOP_START
 (MAIN_LOOP_START)
 // push argument 0
 @ARG
 A=M
 D=M
-
 @SP
 M=M+1
 A=M-1
 M=D
 
+// if COMPUTE_ELEMENT
 @SP
 M=M-1
 A=M
 D=M
 @COMPUTE_ELEMENT
 D;JGT
-@END_PROGRAM
+// goto END_PROGRAM
+END_PROGRAM
 0;JMP
+// label COMPUTE_ELEMENT
 (COMPUTE_ELEMENT)
 // push that 0
 @THAT
 A=M
 D=M
-
 @SP
 M=M+1
 A=M-1
@@ -129,7 +122,6 @@ M=D
 @THAT
 A=M+1
 D=M
-
 @SP
 M=M+1
 A=M-1
@@ -154,11 +146,9 @@ D=M
 A=M+1
 A=A+1
 M=D
-
 // push pointer 1
 @4
 D=M
-
 @SP
 M=M+1
 A=M-1
@@ -167,7 +157,6 @@ M=D
 // push constant 1
 @1
 D=A
-
 @SP
 M=M+1
 A=M-1
@@ -190,12 +179,10 @@ D=M
 
 @4
 M=D
-
 // push argument 0
 @ARG
 A=M
 D=M
-
 @SP
 M=M+1
 A=M-1
@@ -204,7 +191,6 @@ M=D
 // push constant 1
 @1
 D=A
-
 @SP
 M=M+1
 A=M-1
@@ -230,7 +216,8 @@ D=M
 @ARG
 A=M
 M=D
-
-@MAIN_LOOP_START
+// goto MAIN_LOOP_START
+MAIN_LOOP_START
 0;JMP
+// label END_PROGRAM
 (END_PROGRAM)

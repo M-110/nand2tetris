@@ -1,6 +1,7 @@
 from collections import namedtuple
 from enum import Enum
-from typing import List, Generator
+import os
+from typing import List, Generator, Optional, TextIO
 import re
 
 # Each command named tuple stores 1 line of vm code.
@@ -35,23 +36,40 @@ class VMTranslator:
     information between the two.
     
     Args:
-        input_vm_file: the file location of a .vm file to be compiled.
+        vm_program: the location of a .vm file or directory to be compiled.
     """
 
-    def __init__(self, input_vm_file: str):
-        self.input_file = input_vm_file
-        self.output_file = input_vm_file.split('.')[0] + '.asm'
+    def __init__(self, vm_program: str):
+        self.input_program = vm_program
+        self.output_file = ''
 
     def compile(self):
         """Compile the input .vm file into the hack assembly code and
         save it as a .asm file with the same name."""
-        commands = self._parse_file()
+        if '.vm' in self.input_program:
+            self.output_file = self.input_program.split('.')[0] + '.asm'
+            commands = self._parse_file(self.input_program)
+        else:
+            self.output_file = os.path.join(self.input_program.split('.')[0],
+                                            self.input_program.split('\\')[-1] + '.asm')
+            commands = self._parse_directory()
         self._write_file(commands)
 
-    def _parse_file(self):
+    def _parse_directory(self) -> List[Command]:
+        """Compile all the .vm files within the directory nto the hack assembly
+        code and save it as a .asm file with the same name."""
+        files = [os.path.join(self.input_program, file)
+                 for file in os.listdir(self.input_program)
+                 if '.vm' in file]
+        commands_lists = [self._parse_file(file) for file in files]
+
+        # Flatten command lists
+        return [command for commands in commands_lists for command in commands]
+
+    def _parse_file(self, file: str) -> List[Command]:
         """Create a parser which will parse lines in the vm file and return a
         list of the command named tuples."""
-        parser = Parser(self.input_file)
+        parser = Parser(file)
         return parser.commands
 
     def _write_file(self, commands: List[Command]):
@@ -86,7 +104,7 @@ class Parser:
             if command := self._parse_row(str(row)):
                 self.commands.append(command)
 
-    def _parse_row(self, row: str):
+    def _parse_row(self, row: str) -> Optional[Command]:
         """Parse an individual row and return a command named tuple containing
         its instructions."""
         row = self._remove_comments_and_whitespace(row)
@@ -122,7 +140,8 @@ class Parser:
         """Remove any outer white space, remove comments, and reduce
          inner whitespace to one space."""
         row = re.sub(r'\s+', ' ', row).strip()
-        row = re.sub(r'\/\/+.*', '', row).strip()
+        # row = re.sub(r'\/\/+.*', '', row).strip()
+        row = re.sub(r'//+.*', '', row).strip()
         return row
 
 
@@ -137,9 +156,15 @@ class Writer:
     def __init__(self, commands: List[Command], output_file: str):
         self.commands = commands
         self.output_file = output_file
+        self.label_counts = {'eq': 0, 'gt': 0, 'lt': 0, 'call': 0}
         self.asm_commands: List[str] = []
         self.add_bootstrap()
-        self.label_counts = {'eq': 0, 'gt': 0, 'lt': 0, 'call': 0}
+
+    def write(self, *lines: str):
+        """Add asm command lines to the asm_commands list which will be written
+        to the file at the end."""
+        for line in lines:
+            self.asm_commands.append(line)
 
     def write_and_save(self):
         self.parse_commands()
@@ -147,295 +172,346 @@ class Writer:
 
     def parse_commands(self):
         for command in self.commands:
-            print(command)
-            c = self.parse_command(command) + '\n'
-            self.asm_commands.append(c)
+            # print(command)
+            self.parse_command(command)
 
     def save_output(self):
+        print(self.asm_commands)
         with open(self.output_file, 'w') as file:
             for asm_command in self.asm_commands:
                 if asm_command is None:
                     continue
-                file.write(asm_command)
+                file.write(asm_command + '\n')
         print(f'Saved file as {self.output_file!r}')
 
     def add_bootstrap(self):
         pass
-#         self.asm_commands.append("""
-# // Compiled using vm_translator_old.py
-# // Bootstrap (Set SP to 256 and call Sys.init):
-# @256
-# D=A
-# 
-# @SP
-# M=D
-# 
-# //call Sys.init\n""")
-        # TODO REPLACE call with assembly code
 
-    def parse_command(self, command) -> str:
+    #         self.asm_commands.append("""
+    # // Compiled using vm_translator_old.py
+    # // Bootstrap (Set SP to 256 and call Sys.init):
+    # @256
+    # D=A
+    # 
+    # @SP
+    # M=D
+    # 
+    # //call Sys.init\n""")
+    # TODO REPLACE call with assembly code
+
+    def parse_command(self, command):
+        """Determine the command type and then call the proper write method."""
         if command.command_type == CommandType.ARITHMETIC:
-            return self.arithmetic_parser(command)
+            self.write_arithmetic(command)
         elif command.command_type == CommandType.PUSH:
-            return self.push_parser(command)
+            self.write_push(command)
         elif command.command_type == CommandType.POP:
-            return self.pop_parser(command)
+            self.write_pop(command)
         elif command.command_type == CommandType.LABEL:
-            return self.label_parser(command)
+            self.write_label(command)
         elif command.command_type == CommandType.GOTO:
-            return self.goto_parser(command)
+            self.write_goto(command)
         elif command.command_type == CommandType.IF:
-            return self.if_parser(command)
+            self.write_if(command)
         elif command.command_type == CommandType.FUNCTION:
-            return self.function_parser(command)
+            self.write_function(command)
         elif command.command_type == CommandType.RETURN:
-            return self.return_parser(command)
+            self.write_return(command)
         elif command.command_type == CommandType.CALL:
-            return self.call_parser(command)
+            self.write_call(command)
         else:
             raise ValueError(f'{command.command_type!r} is an invalid command')
 
-    ### COMMAND PARSERS
-    def arithmetic_parser(self, command: Command) -> str:
+    # COMMAND PARSERS
+    def write_arithmetic(self, command: Command):
+        """Write an arithmetic command to the file."""
+        self.write(f'// {command.arg1}')
         if command.arg1 in ARITHMETIC_CODE:
-            return f'// {command.arg1}\n' + ARITHMETIC_CODE[command.arg1]
+            self.write(ARITHMETIC_CODE[command.arg1])
         elif command.arg1 in LOGICAL_CODE:
-            return f'// {command.arg1}\n' + LOGICAL_CODE[command.arg1]
+            self.write(LOGICAL_CODE[command.arg1])
         else:
-            return f'// {command.arg1}\n' + self.comparison(command)
+            self._write_comparison(command)
 
-    def push_parser(self, command: Command) -> str:
-        output = []
-        output.append(f'// push {command.arg1} {command.arg2}')
-        # output.append(self.set_d_to_value_at_address(command.arg1, command.arg2))
-        output.append(self.access_segment_address(command.arg1, command.arg2))
+    def write_push(self, command: Command):
+        """Write a push command to the file."""
+        self.write(f'// push {command.arg1} {command.arg2}')
+        self._write_access_segment_address(command.arg1, command.arg2)
         if command.arg1 == "constant":
-            output.append('D=A')
+            self.write('D=A')
         else:
-            output.append('D=M')
-        output.append('')
-        output.append(self.push_d_to_stack())
-        output.append('')
-        return '\n'.join(output)
+            self.write('D=M')
+        self._write_push_d_to_stack()
 
-    def pop_parser(self, command: Command) -> str:
-        output = []
-        output.append(f'// pop {command.arg1} {command.arg2}')
-        output.append(self.pop_d_from_stack())
-        output.append('')
-        output.append(self.access_segment_address(command.arg1, command.arg2))
-        output.append('M=D')
-        output.append('')
-        return '\n'.join(output)
+    def write_pop(self, command: Command):
+        """Write a pop command to the file."""
+        self.write(f'// pop {command.arg1} {command.arg2}')
+        self._write_pop_d_from_stack()
+        self._write_access_segment_address(command.arg1, command.arg2)
+        self.write('M=D')
 
-    def label_parser(self, command: Command) -> str:
-        return f'({command.arg1})'
+    def write_label(self, command: Command):
+        """Write a label to the file."""
+        self.write(f'// label {command.arg1}',
+                   f'({command.arg1})')
 
-    def goto_parser(self, command: Command) -> str:
-        return '\n'.join([f'@{command.arg1}', '0;JMP'])
+    def write_goto(self, command: Command):
+        self.write(f'// goto {command.arg1}',
+                   f'{command.arg1}',
+                   '0;JMP')
 
-    def if_parser(self, command: Command) -> str:
-        return '\n'.join(['@SP', 'M=M-1', 'A=M', 'D=M', f'@{command.arg1}', 'D;JGT'])
+    def write_if(self, command: Command):
+        """Write an if command to the file."""
+        self.write(f'// if {command.arg1}',
+                   '@SP',
+                   'M=M-1',
+                   'A=M',
+                   'D=M',
+                   f'@{command.arg1}',
+                   'D;JGT')
 
-    def function_parser(self, command: Command) -> str:
+    def write_function(self, command: Command):
+        """Write a function command to the file."""
+        self.write(f'// function {command.arg1} {command.arg2}',
+                   f'({command.arg1})')
+        self._write_push_0_to_stack(command.arg2)
 
-        return f'\n({command.arg1})' + self.push_0_to_stack(command.arg2)
-
-    def return_parser(self, command: Command) -> str:
-        output = ['// Return']
+    def write_return(self, command: Command):
+        """Write a return command to the file."""
+        self.write('// return')
         # endFrame = LCL
-        output.append('\n'.join(['@LCL',
-                                 'D=M',
-                                 '',
-                                 '@endFrame',
-                                 'M=D',
-                                 '']))
+        self.write('@LCL',
+                   'D=M',
+                   '',
+                   '@endFrame',
+                   'M=D',
+                   '')
         # retAddress = *(endFrame - 5)
-        output.append('\n'.join(['@LCL',
-                                 'D=M-1',
-                                 'D=D-1',
-                                 'D=D-1',
-                                 'D=D-1',
-                                 'D=D-1',
-                                 'A=D',
-                                 'D=M',
-                                 '',
-                                 '@retAddress',
-                                 'M=D',
-                                 '']))
+        self.write('@LCL',
+                   'D=M-1',
+                   'D=D-1',
+                   'D=D-1',
+                   'D=D-1',
+                   'D=D-1',
+                   'A=D',
+                   'D=M',
+                   '',
+                   '@retAddress',
+                   'M=D',
+                   '')
         # *ARG = pop()
-        output.append(self.pop_d_from_stack())
-        output.append('\n'.join(['@ARG',
-                                 'A=M',
-                                 'M=D']))
+        self._write_pop_d_from_stack()
+        self.write('@ARG',
+                   'A=M',
+                   'M=D')
         # SP = ARG + 1
-        output.append('\n'.join(['@ARG',
-                                 'D=M+1',
-                                 '',
-                                 '@SP',
-                                 'M=D']))
+        self.write('@ARG',
+                   'D=M+1',
+                   '',
+                   '@SP',
+                   'M=D')
         # THAT = *(endFrame - 1)
-        output.append('\n'.join(['@endFrame',
-                                 'A=M-1',
-                                 'D=M',
-                                 '',
-                                 '@THAT',
-                                 'M=D',
-                                 '']))
+        self.write('@endFrame',
+                   'A=M-1',
+                   'D=M',
+                   '',
+                   '@THAT',
+                   'M=D',
+                   '')
         # THIS = *(endFrame - 2)
-        output.append('\n'.join(['@endFrame',
-                                 'D=M-1',
-                                 'A=D-1',
-                                 'D=M',
-                                 '',
-                                 '@THIS',
-                                 'M=D',
-                                 '']))
+        self.write('@endFrame',
+                   'D=M-1',
+                   'A=D-1',
+                   'D=M',
+                   '',
+                   '@THIS',
+                   'M=D',
+                   '')
         # ARG = *(endFrame - 3)
-        output.append('\n'.join(['@endFrame',
-                                 'D=M-1',
-                                 'D=D-1',
-                                 'A=D-1',
-                                 'D=M',
-                                 '',
-                                 '@ARG',
-                                 'M=D',
-                                 '']))
+        self.write('@endFrame',
+                   'D=M-1',
+                   'D=D-1',
+                   'A=D-1',
+                   'D=M',
+                   '',
+                   '@ARG',
+                   'M=D',
+                   '')
         # LCL = *(endFrame - 4)
-        output.append('\n'.join(['@endFrame',
-                                 'D=M-1',
-                                 'D=D-1',
-                                 'D=D-1',
-                                 'A=D-1',
-                                 'D=M',
-                                 '',
-                                 '@LCL',
-                                 'M=D',
-                                 '']))
+        self.write('@endFrame',
+                   'D=M-1',
+                   'D=D-1',
+                   'D=D-1',
+                   'A=D-1',
+                   'D=M',
+                   '',
+                   '@LCL',
+                   'M=D',
+                   '')
         # Goto retAddress
-        output.append('\n'.join([f'@retAddress',
-                                 'A=M',
-                                 '0;JMP']))
-        return '\n'.join(output)
+        self.write('@retAddress',
+                   'A=M',
+                   '0;JMP')
 
-    def call_parser(self, command: Command) -> str:
-        output = []
-        # Push returnAddress
+    def write_call(self, command: Command):
+        """Write call command to file."""
+        self.write(f'// call {command.arg1}')
         self.label_counts['call'] += 1
-        output.append(f'@RETURN_ADDRESS_CALL_{self.label_counts["call"]}')
-        output.append('D=A')
-        output.append(self.push_d_to_stack())
+        # Push returnAddress
+        self.write(f'@RETURN_ADDRESS_CALL_{self.label_counts["call"]}',
+                   'D=A')
+        self._write_push_d_to_stack()
         # --SAVE THESE--
         # Push LCL
-        output.append('\n'.join(['@LCL',
-                                 'D=M']))
-        output.append(self.push_d_to_stack())
+        self.write('@LCL',
+                   'D=M')
+        self._write_push_d_to_stack()
         # Push ARG
-        output.append('\n'.join(['@ARG',
-                                 'D=M']))
-        output.append(self.push_d_to_stack())
+        self.write('@ARG',
+                   'D=M')
+        self._write_push_d_to_stack()
         # Push THIS
-        output.append('\n'.join(['@THIS',
-                                 'D=M']))
-        output.append(self.push_d_to_stack())
+        self.write('@THIS',
+                   'D=M')
+        self._write_push_d_to_stack()
         # Push THAT
-        output.append('\n'.join(['@THAT',
-                                 'D=M']))
-        output.append(self.push_d_to_stack())
+        self.write('@THAT',
+                   'D=M')
+        self._write_push_d_to_stack()
         # --------------
         # LCL = SP
-        output.append('\n'.join(['@SP',
-                                 'D=M',
-                                 '',
-                                 '@LCL',
-                                 '@M=D']))
+        self.write('@SP',
+                   'D=M',
+                   '',
+                   '@LCL',
+                   'M=D')
         # goto Function
         # TODO: THIS IS NOT RIGHT
-        output.append('\n'.join([f'@{command.arg1}', '0;JMP']))
+        self.write(f'@{command.arg1}',
+                   '0;JMP')
         # Declare (returnAddress)
-        output.append(f'(RETURN_ADDRESS_CALL_{self.label_counts["call"]})')
-        return '\n'.join(output)
+        self.write(f'(RETURN_ADDRESS_CALL_{self.label_counts["call"]})')
 
-    def access_segment_address(self, segment: str, index: int) -> str:
+    def _write_access_segment_address(self, segment: str, index: int):
         """Set D to the value at the address"""
         if segment == 'static':
             # TODO: static should be module name.
-            return f'@static.{index}'
+            self.write(f'@static.{index}')
         elif segment == 'constant':
-            return f'@{index}'
+            self.write(f'@{index}')
         elif segment == 'pointer':
-            return f'@{index + 3}'
+            self.write(f'@{index + 3}')
         elif segment == 'temp':
-            return f'@{index + 5}'
+            self.write(f'@{index + 5}')
         else:
-            return self.access_segment_address_from_pointer(segment, index)
+            return self._write_access_segment_address_from_pointer(segment, index)
 
-    def access_segment_address_from_pointer(self, segment: str, index: int) -> str:
+    def _write_access_segment_address_from_pointer(self, segment: str, index: int):
         """Set A to the address of the segment index."""
         target = segment_dict[segment]
-        output = [f'@{target}']
+        self.write(f'@{target}')
         if index == 0:
-            output.append('A=M')
+            self.write('A=M')
         else:
-            output.append('A=M+1')
+            self.write('A=M+1')
             for _ in range(index - 1):
-                output.append('A=A+1')
-        return '\n'.join(output)
+                self.write('A=A+1')
 
-    def comparison(self, command: Command) -> str:
+    def _write_comparison(self, command: Command):
         """Generate code for a stack logical comparison"""
         self.label_counts[command.arg1] += 1
         count = self.label_counts[command.arg1]
         arg = command.arg1.upper()
-        return '\n'.join(['@SP', 'M=M-1', '', '@SP', 'A=M', 'D=M',
-                          '@SP', 'A=M-1', 'D=M-D', 'M=-1',
-                          f'@END_{arg}_{count}', f'D; J{arg}', '', '@SP',
-                          'A=M-1', 'M=0', '', f'(END_{arg}_{count})', ''])
-
-    # 
-    # def set_d_to_value_at_segment(self, segment: str, index: int) -> str:
-    #     """Set d to value at segment."""
-    #     target = segment_dict[segment]
-    #     output = [f'@{target}']
-    #     if index == 0:
-    #         output.append('A=M')
-    #     else:
-    #         output.append('A=M+1')
-    #         for _ in range(index - 1):
-    #             output.append('A=A+1')
-    #     output.append('D=M')
-    #     return '\n'.join(output)
+        self.write('@SP',
+                   'M=M-1',
+                   '',
+                   '@SP',
+                   'A=M',
+                   'D=M',
+                   '@SP',
+                   'A=M-1',
+                   'D=M-D',
+                   'M=-1',
+                   f'@END_{arg}_{count}',
+                   f'D; J{arg}',
+                   '',
+                   '@SP',
+                   'A=M-1', 'M=0',
+                   '',
+                   f'(END_{arg}_{count})',
+                   '')
 
     # STACK
-    def push_d_to_stack(self) -> str:
+    def _write_push_d_to_stack(self):
         """Push the current value in the D slot to the top of the stack."""
-        return '\n'.join(['@SP', 'M=M+1', 'A=M-1', 'M=D'])
+        self.write('@SP',
+                   'M=M+1',
+                   'A=M-1',
+                   'M=D',
+                   '')
 
-    def pop_d_from_stack(self) -> str:
+    def _write_pop_d_from_stack(self):
         """Pop the stack to D."""
-        return '\n'.join(['@SP', 'M=M-1', 'A=M', 'D=M'])
+        self.write('@SP',
+                   'M=M-1',
+                   'A=M',
+                   'D=M',
+                   '')
 
-    def push_0_to_stack(self, n: int) -> str:
+    def _write_push_0_to_stack(self, n: int):
         """Push 0 to stock n times."""
-        return '\n'.join(['\n'.join(['', '@SP', 'M=M+1', 'A=M-1', 'M=0'])
-                          for _ in range(n)])
+        for _ in range(n):
+            self.write('@SP',
+                       'M=M+1',
+                       'A=M-1',
+                       'M=0',
+                       '')
 
 
-ARITHMETIC_CODE = {'add': '\n'.join(['@SP', 'M=M-1', 'A=M', 'D=M',
-                                     '', '@SP', 'A=M-1', 'M=M+D']),
-                   'sub': '\n'.join(['@SP', 'M=M-1', '', '@SP',
-                                     'A=M', 'D=M', '', '@SP', 'A=M-1', 'M=M-D'])}
+ARITHMETIC_CODE = {'add': '\n'.join(['@SP',
+                                     'M=M-1',
+                                     'A=M',
+                                     'D=M',
+                                     '',
+                                     '@SP',
+                                     'A=M-1',
+                                     'M=M+D']),
+                   'sub': '\n'.join(['@SP',
+                                     'M=M-1',
+                                     '',
+                                     '@SP',
+                                     'A=M',
+                                     'D=M',
+                                     '',
+                                     '@SP',
+                                     'A=M-1',
+                                     'M=M-D'])}
 
-LOGICAL_CODE = {'neg': '\n'.join(['@SP', 'A=M-1', 'M=-M']),
-                'not': '\n'.join(['@SP', 'A=M-1', 'M=!M']),
-                'and': '\n'.join(['@SP', 'M=M-1', 'A=M', 'D=M', 'A=A-1', 'M=D&M']),
-                'or': '\n'.join(['@SP', 'M=M-1', 'A=M', 'D=M', 'A=A-1', 'M=D|M'])}
+LOGICAL_CODE = {'neg': '\n'.join(['@SP',
+                                  'A=M-1',
+                                  'M=-M']),
+                'not': '\n'.join(['@SP',
+                                  'A=M-1',
+                                  'M=!M']),
+                'and': '\n'.join(['@SP',
+                                  'M=M-1',
+                                  'A=M',
+                                  'D=M',
+                                  'A=A-1',
+                                  'M=D&M']),
+                'or': '\n'.join(['@SP',
+                                 'M=M-1',
+                                 'A=M',
+                                 'D=M',
+                                 'A=A-1',
+                                 'M=D|M'])}
 
 
 def main():
-    files = ['ProgramFlow\\BasicLoop\\BasicLoop.vm',
-             'ProgramFlow\\FibonacciSeries\\FibonacciSeries.vm',
-             'FunctionCalls\\SimpleFunction\\SimpleFunction.vm']
+    files = ['ProgramFlow\\BasicLoop',
+             'ProgramFlow\\FibonacciSeries',
+             'FunctionCalls\\SimpleFunction',
+             'FunctionCalls\\NestedCall']
     for file in files:
         translator = VMTranslator(file)
         translator.compile()

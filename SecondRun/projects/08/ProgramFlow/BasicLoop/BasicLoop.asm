@@ -1,7 +1,6 @@
 // push constant 0
 @0
 D=A
-
 @SP
 M=M+1
 A=M-1
@@ -16,13 +15,12 @@ D=M
 @LCL
 A=M
 M=D
-
+// label LOOP_START
 (LOOP_START)
 // push argument 0
 @ARG
 A=M
 D=M
-
 @SP
 M=M+1
 A=M-1
@@ -32,7 +30,6 @@ M=D
 @LCL
 A=M
 D=M
-
 @SP
 M=M+1
 A=M-1
@@ -56,12 +53,10 @@ D=M
 @LCL
 A=M
 M=D
-
 // push argument 0
 @ARG
 A=M
 D=M
-
 @SP
 M=M+1
 A=M-1
@@ -70,7 +65,6 @@ M=D
 // push constant 1
 @1
 D=A
-
 @SP
 M=M+1
 A=M-1
@@ -96,17 +90,16 @@ D=M
 @ARG
 A=M
 M=D
-
 // push argument 0
 @ARG
 A=M
 D=M
-
 @SP
 M=M+1
 A=M-1
 M=D
 
+// if LOOP_START
 @SP
 M=M-1
 A=M
@@ -117,7 +110,6 @@ D;JGT
 @LCL
 A=M
 D=M
-
 @SP
 M=M+1
 A=M-1

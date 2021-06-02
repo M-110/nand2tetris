@@ -1,4 +1,4 @@
-
+// function SimpleFunction.test 2
 (SimpleFunction.test)
 @SP
 M=M+1
@@ -9,11 +9,11 @@ M=0
 M=M+1
 A=M-1
 M=0
+
 // push local 0
 @LCL
 A=M
 D=M
-
 @SP
 M=M+1
 A=M-1
@@ -23,7 +23,6 @@ M=D
 @LCL
 A=M+1
 D=M
-
 @SP
 M=M+1
 A=M-1
@@ -46,7 +45,6 @@ M=!M
 @ARG
 A=M
 D=M
-
 @SP
 M=M+1
 A=M-1
@@ -65,7 +63,6 @@ M=M+D
 @ARG
 A=M+1
 D=M
-
 @SP
 M=M+1
 A=M-1
@@ -82,7 +79,7 @@ D=M
 @SP
 A=M-1
 M=M-D
-// Return
+// return
 @LCL
 D=M
 
@@ -105,6 +102,7 @@ M=D
 M=M-1
 A=M
 D=M
+
 @ARG
 A=M
 M=D

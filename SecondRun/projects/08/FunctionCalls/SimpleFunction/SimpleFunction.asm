@@ -1,3 +1,16 @@
+// Compiled using vm_translator.py
+
+// <------------- START BOOTSTRAP ------------->
+
+@256
+D=A
+
+@SP
+M=D
+
+
+// <------------- END BOOTSTRAP ------------->
+
 // function SimpleFunction.test 2
 (SimpleFunction.test)
 @SP

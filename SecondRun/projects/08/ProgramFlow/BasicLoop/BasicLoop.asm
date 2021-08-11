@@ -1,3 +1,16 @@
+// Compiled using vm_translator.py
+
+// <------------- START BOOTSTRAP ------------->
+
+@256
+D=A
+
+@SP
+M=D
+
+
+// <------------- END BOOTSTRAP ------------->
+
 // push constant 0
 @0
 D=A
@@ -99,7 +112,7 @@ M=M+1
 A=M-1
 M=D
 
-// if LOOP_START
+// if-goto LOOP_START
 @SP
 M=M-1
 A=M

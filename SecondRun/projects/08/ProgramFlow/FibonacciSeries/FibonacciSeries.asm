@@ -1,3 +1,16 @@
+// Compiled using vm_translator.py
+
+// <------------- START BOOTSTRAP ------------->
+
+@256
+D=A
+
+@SP
+M=D
+
+
+// <------------- END BOOTSTRAP ------------->
+
 // push argument 1
 @ARG
 A=M+1
@@ -97,7 +110,7 @@ M=M+1
 A=M-1
 M=D
 
-// if COMPUTE_ELEMENT
+// if-goto COMPUTE_ELEMENT
 @SP
 M=M-1
 A=M
@@ -105,7 +118,7 @@ D=M
 @COMPUTE_ELEMENT
 D;JGT
 // goto END_PROGRAM
-END_PROGRAM
+@END_PROGRAM
 0;JMP
 // label COMPUTE_ELEMENT
 (COMPUTE_ELEMENT)
@@ -217,7 +230,7 @@ D=M
 A=M
 M=D
 // goto MAIN_LOOP_START
-MAIN_LOOP_START
+@MAIN_LOOP_START
 0;JMP
 // label END_PROGRAM
 (END_PROGRAM)

@@ -301,7 +301,7 @@ class Writer:
                    'A=M',
                    'D=M',
                    f'@{command.arg1}',
-                   'D;JGT')
+                   'D;JLT')
 
     def write_function(self, command: Command):
         """Write a function command to the file."""
@@ -566,6 +566,7 @@ LOGICAL_CODE = {'neg': '\n'.join(['@SP',
 def main():
     """Translate and save the files."""
     files = [
+        'Playground',
         'ProgramFlow\\BasicLoop',
         'ProgramFlow\\FibonacciSeries',
         'FunctionCalls\\SimpleFunction',

@@ -1,2 +1,26 @@
-﻿push local 101
-push z
+// FILE
+label Sys.init
+push constant 10
+push constant 5
+lt
+if-goto A
+
+goto B
+
+label A // (5 < 10)
+push constant 999
+push constant 999
+push constant 999
+
+goto END
+
+label B // (5 < 10)
+push constant 1
+push constant 1
+push constant 1
+
+goto END
+
+label END
+goto END
+

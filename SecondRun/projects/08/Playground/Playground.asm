@@ -84,65 +84,88 @@ M=D
 
 // <------------- END BOOTSTRAP ------------->
 
-// push constant 0
-@0
+// label Sys.init
+(Sys.init)
+// push constant 10
+@10
 D=A
 @SP
 M=M+1
 A=M-1
 M=D
 
-// pop local 0
-@SP
-M=M-1
-A=M
-D=M
-
-@LCL
-A=M
-M=D
-// label LOOP_START
-(LOOP_START)
-// push argument 0
-@ARG
-A=M
-D=M
+// push constant 5
+@5
+D=A
 @SP
 M=M+1
 A=M-1
 M=D
 
-// push local 0
-@LCL
+// lt
+@SP
+M=M-1
+
+@SP
 A=M
 D=M
+@SP
+A=M-1
+D=M-D
+M=-1
+@END_LT_1
+D; JLT
+
+@SP
+A=M-1
+M=0
+
+(END_LT_1)
+
+// if-goto A
+@SP
+M=M-1
+A=M
+D=M
+@A
+D;JLT
+// goto B
+@B
+0;JMP
+// label A
+(A)
+// push constant 999
+@999
+D=A
 @SP
 M=M+1
 A=M-1
 M=D
 
-// add
+// push constant 999
+@999
+D=A
 @SP
-M=M-1
-A=M
-D=M
-
-@SP
+M=M+1
 A=M-1
-M=M+D
-// pop local 0
-@SP
-M=M-1
-A=M
-D=M
-
-@LCL
-A=M
 M=D
-// push argument 0
-@ARG
-A=M
-D=M
+
+// push constant 999
+@999
+D=A
+@SP
+M=M+1
+A=M-1
+M=D
+
+// goto END
+@END
+0;JMP
+// label B
+(B)
+// push constant 1
+@1
+D=A
 @SP
 M=M+1
 A=M-1
@@ -156,48 +179,19 @@ M=M+1
 A=M-1
 M=D
 
-// sub
-@SP
-M=M-1
-
-@SP
-A=M
-D=M
-
-@SP
-A=M-1
-M=M-D
-// pop argument 0
-@SP
-M=M-1
-A=M
-D=M
-
-@ARG
-A=M
-M=D
-// push argument 0
-@ARG
-A=M
-D=M
+// push constant 1
+@1
+D=A
 @SP
 M=M+1
 A=M-1
 M=D
 
-// if-goto LOOP_START
-@SP
-M=M-1
-A=M
-D=M
-@LOOP_START
-D;JLT
-// push local 0
-@LCL
-A=M
-D=M
-@SP
-M=M+1
-A=M-1
-M=D
-
+// goto END
+@END
+0;JMP
+// label END
+(END)
+// goto END
+@END
+0;JMP

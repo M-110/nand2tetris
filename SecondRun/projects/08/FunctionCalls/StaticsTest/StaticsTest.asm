@@ -1,13 +1,86 @@
 // Compiled using vm_translator.py
 
 // <------------- START BOOTSTRAP ------------->
-
+// Initialize pointer to 256
 @256
 D=A
-
 @SP
 M=D
 
+// Set LCL, ARG, THIS and THAT to illegal values
+@1
+D=-A
+@LCL
+M=D
+
+@2
+D=-A
+@ARG
+M=D
+
+@3
+D=-A
+@THIS
+M=D
+
+@4
+D=-A
+@THAT
+M=D
+
+// Bootstrap Calling Sys.init()
+@RETURN_ADDRESS_CALL_1
+D=A
+@SP
+M=M+1
+A=M-1
+M=D
+
+@LCL
+D=M
+@SP
+M=M+1
+A=M-1
+M=D
+
+@ARG
+D=M
+@SP
+M=M+1
+A=M-1
+M=D
+
+@THIS
+D=M
+@SP
+M=M+1
+A=M-1
+M=D
+
+@THAT
+D=M
+@SP
+M=M+1
+A=M-1
+M=D
+
+@SP
+D=M
+D=D-1
+D=D-1
+D=D-1
+D=D-1
+D=D-1
+@ARG
+M=D
+@SP
+D=M
+
+@LCL
+M=D
+@Sys.init
+0;JMP
+(RETURN_ADDRESS_CALL_1)
 
 // <------------- END BOOTSTRAP ------------->
 
@@ -30,7 +103,7 @@ A=M-1
 M=D
 
 // call Class1.set 2
-@RETURN_ADDRESS_CALL_1
+@RETURN_ADDRESS_CALL_2
 D=A
 @SP
 M=M+1
@@ -83,7 +156,7 @@ D=M
 M=D
 @Class1.set
 0;JMP
-(RETURN_ADDRESS_CALL_1)
+(RETURN_ADDRESS_CALL_2)
 // pop temp 0
 @SP
 M=M-1
@@ -109,7 +182,7 @@ A=M-1
 M=D
 
 // call Class2.set 2
-@RETURN_ADDRESS_CALL_2
+@RETURN_ADDRESS_CALL_3
 D=A
 @SP
 M=M+1
@@ -162,7 +235,7 @@ D=M
 M=D
 @Class2.set
 0;JMP
-(RETURN_ADDRESS_CALL_2)
+(RETURN_ADDRESS_CALL_3)
 // pop temp 0
 @SP
 M=M-1
@@ -172,7 +245,7 @@ D=M
 @5
 M=D
 // call Class1.get 0
-@RETURN_ADDRESS_CALL_3
+@RETURN_ADDRESS_CALL_4
 D=A
 @SP
 M=M+1
@@ -223,9 +296,9 @@ D=M
 M=D
 @Class1.get
 0;JMP
-(RETURN_ADDRESS_CALL_3)
+(RETURN_ADDRESS_CALL_4)
 // call Class2.get 0
-@RETURN_ADDRESS_CALL_4
+@RETURN_ADDRESS_CALL_5
 D=A
 @SP
 M=M+1
@@ -276,7 +349,7 @@ D=M
 M=D
 @Class2.get
 0;JMP
-(RETURN_ADDRESS_CALL_4)
+(RETURN_ADDRESS_CALL_5)
 // label WHILE
 (WHILE)
 // goto WHILE
@@ -299,7 +372,7 @@ M=M-1
 A=M
 D=M
 
-@static.0
+@static.ZClass1.0
 M=D
 // push argument 1
 @ARG
@@ -316,7 +389,7 @@ M=M-1
 A=M
 D=M
 
-@static.1
+@static.ZClass1.1
 M=D
 // push constant 0
 @0
@@ -398,7 +471,7 @@ A=M
 // function Class1.get 0
 (Class1.get)
 // push static 0
-@static.0
+@static.ZClass1.0
 D=M
 @SP
 M=M+1
@@ -406,7 +479,7 @@ A=M-1
 M=D
 
 // push static 1
-@static.1
+@static.ZClass1.1
 D=M
 @SP
 M=M+1
@@ -510,7 +583,7 @@ M=M-1
 A=M
 D=M
 
-@static.0
+@static.ZClass2.0
 M=D
 // push argument 1
 @ARG
@@ -527,7 +600,7 @@ M=M-1
 A=M
 D=M
 
-@static.1
+@static.ZClass2.1
 M=D
 // push constant 0
 @0
@@ -609,7 +682,7 @@ A=M
 // function Class2.get 0
 (Class2.get)
 // push static 0
-@static.0
+@static.ZClass2.0
 D=M
 @SP
 M=M+1
@@ -617,7 +690,7 @@ A=M-1
 M=D
 
 // push static 1
-@static.1
+@static.ZClass2.1
 D=M
 @SP
 M=M+1

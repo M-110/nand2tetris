@@ -1,17 +1,19 @@
+"""Translates .vm code to .asm code."""
 from collections import namedtuple
 from enum import Enum
 import os
-from typing import List, Generator, Optional, TextIO
+from typing import List, Generator, Optional
 import re
 
 # Each command named tuple stores 1 line of vm code.
-Command = namedtuple('Command', 'command_type arg1 arg2 vm_code')
+Command = namedtuple('Command', 'command_type arg1 arg2 vm_code program')
 
 ARITHMETIC_COMMANDS = {'add', 'sub', 'neg', 'eq', 'gt', 'lt', 'and', 'or',
                        'not'}
 
 
 class CommandType(Enum):
+    """Possible VM Commands"""
     ARITHMETIC = 1
     PUSH = 2
     POP = 3
@@ -68,7 +70,8 @@ class VMTranslator:
         # Flatten command lists
         return [command for commands in commands_lists for command in commands]
 
-    def _parse_file(self, file: str) -> List[Command]:
+    @staticmethod
+    def _parse_file(file: str) -> List[Command]:
         """Create a parser which will parse lines in the vm file and return a
         list of the command named tuples."""
         parser = Parser(file)
@@ -90,6 +93,7 @@ class Parser:
 
     def __init__(self, input_file: str):
         self.input_file = input_file
+        self.program_name = input_file.split('\\')[-1].split('.')[0]
         self.reader: Generator = self._open_file()
         self.commands: List[Command] = []
         self._parse_rows()
@@ -116,30 +120,35 @@ class Parser:
             return
 
         command, *args = row.split(' ')
-
+        program = self.program_name
         if command.lower() in ARITHMETIC_COMMANDS:
-            return Command(CommandType.ARITHMETIC, command, None, row)
+            return Command(CommandType.ARITHMETIC, command, None, row, program)
         elif command.lower() == "push":
-            return Command(CommandType.PUSH, args[0], int(args[1]), row)
+            return Command(CommandType.PUSH, args[0], int(args[1]), row,
+                           program)
         elif command.lower() == "pop":
-            return Command(CommandType.POP, args[0], int(args[1]), row)
+            return Command(CommandType.POP, args[0], int(args[1]), row,
+                           program)
         elif command.lower() == "label":
-            return Command(CommandType.LABEL, args[0], None, row)
+            return Command(CommandType.LABEL, args[0], None, row, program)
         elif command.lower() == "goto":
-            return Command(CommandType.GOTO, args[0], None, row)
+            return Command(CommandType.GOTO, args[0], None, row, program)
         elif command.lower() == "if-goto":
-            return Command(CommandType.IF, args[0], None, row)
+            return Command(CommandType.IF, args[0], None, row, program)
         elif command.lower() == "function":
-            return Command(CommandType.FUNCTION, args[0], int(args[1]), row)
+            return Command(CommandType.FUNCTION, args[0], int(args[1]), row,
+                           program)
         elif command.lower() == "return":
-            return Command(CommandType.RETURN, None, None, row)
+            return Command(CommandType.RETURN, None, None, row, program)
         elif command.lower() == "call":
-            return Command(CommandType.CALL, args[0], int(args[1]), row)
+            return Command(CommandType.CALL, args[0], int(args[1]), row,
+                           program)
         else:
             raise NotImplementedError(
                 f"Parser handling for {command!r} not yet implemented.")
 
-    def _remove_comments_and_whitespace(self, row: str) -> str:
+    @staticmethod
+    def _remove_comments_and_whitespace(row: str) -> str:
         """Remove any outer white space, remove comments, and reduce
          inner whitespace to one space."""
         row = re.sub(r'\s+', ' ', row).strip()
@@ -168,15 +177,34 @@ class Writer:
         self.write('// Compiled using vm_translator.py',
                    '',
                    '// <------------- START BOOTSTRAP ------------->',
-                   '',
+                   '// Initialize pointer to 256',
                    '@256',
                    'D=A',
-                   '',
                    '@SP',
                    'M=D',
-                   '')
-        # self.write_call(Command(CommandType.CALL, 'Sys.init', 0,
-        # 'BOOTSTRAP'))
+                   '',
+                   '// Set LCL, ARG, THIS and THAT to illegal values',
+                   '@1',
+                   'D=-A',
+                   '@LCL',
+                   'M=D',
+                   '',
+                   '@2',
+                   'D=-A',
+                   '@ARG',
+                   'M=D',
+                   '',
+                   '@3',
+                   'D=-A',
+                   '@THIS',
+                   'M=D',
+                   '',
+                   '@4',
+                   'D=-A',
+                   '@THAT',
+                   'M=D')
+        self.write('', '// Bootstrap Calling Sys.init()')
+        self.write_call(Command(CommandType.CALL, 'Sys.init', 0, '', ''))
         self.write('', '// <------------- END BOOTSTRAP ------------->', '')
 
     def write(self, *lines: str):
@@ -224,7 +252,7 @@ class Writer:
         elif command.command_type == CommandType.FUNCTION:
             self.write_function(command)
         elif command.command_type == CommandType.RETURN:
-            self.write_return(command)
+            self.write_return()
         elif command.command_type == CommandType.CALL:
             self.write_call(command)
         else:
@@ -242,7 +270,8 @@ class Writer:
 
     def write_push(self, command: Command):
         """Write a push command to the file."""
-        self._write_access_segment_address(command.arg1, command.arg2)
+        self._write_access_segment_address(command.arg1, command.arg2,
+                                           command.program)
         if command.arg1 == "constant":
             self.write('D=A')
         else:
@@ -252,7 +281,8 @@ class Writer:
     def write_pop(self, command: Command):
         """Write a pop command to the file."""
         self._write_pop_d_from_stack()
-        self._write_access_segment_address(command.arg1, command.arg2)
+        self._write_access_segment_address(command.arg1, command.arg2,
+                                           command.program)
         self.write('M=D')
 
     def write_label(self, command: Command):
@@ -260,6 +290,7 @@ class Writer:
         self.write(f'({command.arg1})')
 
     def write_goto(self, command: Command):
+        """Write a goto to the file."""
         self.write(f'@{command.arg1}',
                    '0;JMP')
 
@@ -277,7 +308,7 @@ class Writer:
         self.write(f'({command.arg1})')
         self._write_push_0_to_stack(command.arg2)
 
-    def write_return(self, command: Command):
+    def write_return(self):
         """Write a return command to the file."""
         # endFrame = LCL
         self.write('@LCL',
@@ -401,11 +432,12 @@ class Writer:
         # Declare (returnAddress)
         self.write(f'(RETURN_ADDRESS_CALL_{self.label_counts["call"]})')
 
-    def _write_access_segment_address(self, segment: str, index: int):
+    def _write_access_segment_address(self, segment: str, index: int,
+                                      program: str):
         """Set D to the value at the address"""
         if segment == 'static':
-            # TODO: static should be module name.
-            self.write(f'@static.{index}')
+            print(f'@static.{program}.{index}')
+            self.write(f'@static.{program}.{index}')
         elif segment == 'constant':
             self.write(f'@{index}')
         elif segment == 'pointer':
@@ -534,13 +566,13 @@ LOGICAL_CODE = {'neg': '\n'.join(['@SP',
 def main():
     """Translate and save the files."""
     files = [
-        # 'ProgramFlow\\BasicLoop',
-        #  'ProgramFlow\\FibonacciSeries',
-        #  'FunctionCalls\\SimpleFunction',
-         'FunctionCalls\\NestedCall',
-         # 'FunctionCalls\\StaticsTest',
-         # 'FunctionCalls\\FibonacciElement'
-             ]
+        'ProgramFlow\\BasicLoop',
+        'ProgramFlow\\FibonacciSeries',
+        'FunctionCalls\\SimpleFunction',
+        'FunctionCalls\\NestedCall',
+        'FunctionCalls\\StaticsTest',
+        'FunctionCalls\\FibonacciElement'
+    ]
     for file in files:
         translator = VMTranslator(file)
         translator.compile()
